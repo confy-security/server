@@ -30,7 +30,7 @@ async def websocket_endpoint(websocket: WebSocket, sender_id: str, recipient_id:
             await websocket.close()
             logger.warning(
                 f'User {sender_id} tried to talk '
-                'to user {recipient_id} who is unavailable.'
+                f'to user {recipient_id} who is unavailable.'
             )
 
     logger.info(f'User {sender_id} connected.')
