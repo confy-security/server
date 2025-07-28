@@ -8,13 +8,13 @@ authors = [
 readme = "README.md"
 requires-python = ">=3.13,<4.0"
 dependencies = [
-    "fastapi (>=0.115.12,<0.116.0)",
+    "fastapi (>=0.115.14,<0.116.0)",
     "websockets (>=15.0.1,<16.0.0)",
-    "uvicorn (>=0.34.0,<0.35.0)",
+    "uvicorn (>=0.34.3,<0.35.0)",
 ]
 
 [tool.poetry.group.dev.dependencies]
-ruff = "^0.11.2"
+ruff = "^0.11.13"
 taskipy = "^1.14.1"
 
 [build-system]
@@ -22,11 +22,12 @@ requires = ["poetry-core>=2.0.0,<3.0.0"]
 build-backend = "poetry.core.masonry.api"
 
 [tool.ruff]
-line-length = 88
+line-length = 99
 
 [tool.ruff.lint]
 preview = true
-select = ['I', 'F', 'E', 'W', 'PL', 'PT']
+select = ['I', 'F', 'E', 'W', 'PL', 'PT', 'D']
+extend-ignore = ["E501", "D203", "D212"]
 
 [tool.ruff.format]
 preview = true
@@ -34,8 +35,9 @@ quote-style = 'single'
 
 [tool.ruff.lint.per-file-ignores]
 "main.py" = ['PLR0912']
+"__init__.py" = ['D104']
 
 [tool.taskipy.tasks]
-dev = 'uvicorn --reload --host 127.0.0.1 server.main:app'
+run = 'uvicorn --reload --host 127.0.0.1 server.main:app'
 lint = 'ruff check .; ruff check . --diff'
 format = 'ruff format .; ruff check . --fix'

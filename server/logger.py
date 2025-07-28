@@ -1,3 +1,9 @@
+"""
+Configuração do logger da aplicação.
+
+Este módulo configura o logger para a aplicação, definindo formatos, manipuladores e níveis de log.
+"""
+
 import logging
 import sys
 from logging.config import dictConfig
