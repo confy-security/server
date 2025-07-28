@@ -19,7 +19,22 @@ from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 
 from server.logger import logger
 
-app = FastAPI(title='Confy Server')
+description = """
+Este servidor realiza o encaminhamento de mensagens entre usuários conectados
+via WebSocket utilizando algum aplicativo cliente compatível com o servidor.
+"""
+
+app = FastAPI(
+    title='Confy Server',
+    description=description,
+    version='0.0.1.dev1',
+    terms_of_service='https://github.com/confy-security/server/blob/main/LICENSE',
+    contact={
+        'name': 'Confy Security Team',
+        'url': 'https://github.com/confy-security/server',
+        'email': 'confy@henriquesebastiao.com',
+    },
+)
 
 # Dicionário para armazenar conexões WebSocket ativas no formato {user_id: websocket}
 active_connections: dict[str, WebSocket] = {}
