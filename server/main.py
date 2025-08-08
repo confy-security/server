@@ -68,7 +68,7 @@ async def websocket_endpoint(websocket: WebSocket, sender_id: str, recipient_id:
 
     active_tunnels.add(tunnel_id)
 
-    logger.info(f'User {sender_id} connected.')
+    logger.info(f'Usuário {sender_id} conectado.')
 
     # Se o destinatário ainda não estiver conectado, avisa o remetente
     if recipient_id not in active_connections:
@@ -76,8 +76,8 @@ async def websocket_endpoint(websocket: WebSocket, sender_id: str, recipient_id:
         waiting_for.setdefault(recipient_id, []).append(sender_id)
 
         await websocket.send_text(
-            'system-message: The recipient is not yet connected. '
-            'You will be notified when they come online.'
+            'system-message: O destinatário ainda não está conectado. '
+            'Você será notificado quando ele estiver online.'
         )
 
     # Verifica se alguém estava aguardando por este usuário
@@ -85,7 +85,7 @@ async def websocket_endpoint(websocket: WebSocket, sender_id: str, recipient_id:
         for waiting_sender in waiting_for[sender_id]:
             if waiting_sender in active_connections:
                 await active_connections[waiting_sender].send_text(
-                    'system-message: The recipient user is now logged in.'
+                    'system-message: O usuário destinatário agora está conectado.'
                 )
         del waiting_for[sender_id]
 
@@ -100,7 +100,7 @@ async def websocket_endpoint(websocket: WebSocket, sender_id: str, recipient_id:
             else:
                 # Se o destinatário não estiver conectado, avisa o remetente
                 await websocket.send_text(
-                    'system-message: message to the other user is not yet logged in.'
+                    'system-message: O outro usuário ainda não está conectado.'
                 )
 
     # Se o remetente desconectar, remove a conexão e notifica o destinatário
@@ -112,7 +112,7 @@ async def websocket_endpoint(websocket: WebSocket, sender_id: str, recipient_id:
         # Se o destinatário ainda estiver conectado, avisa e encerra a conexão dele também
         if recipient_id in active_connections:
             recipient_connection = active_connections[recipient_id]
-            await recipient_connection.send_text('The other user has disconnected.')
+            await recipient_connection.send_text('system-message: O outro usuário se desconectou.')
             await recipient_connection.close()
             del active_connections[recipient_id]
 
@@ -120,4 +120,4 @@ async def websocket_endpoint(websocket: WebSocket, sender_id: str, recipient_id:
         if tunnel_id in active_tunnels:
             active_tunnels.remove(tunnel_id)
 
-        logger.info(f'User {sender_id} disconnected.')
+        logger.info(f'Usuário {sender_id} desconectado.')
