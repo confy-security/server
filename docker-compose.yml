@@ -1,0 +1,20 @@
+services:
+  server:
+    container_name: confy-server
+    image: 'confy-server:${TAG-latest}'
+    restart: always
+    build: .
+    volumes:
+      - .:/code
+  web:
+    container_name: web-confy-server
+    image: nginx:stable-alpine
+    restart: always
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf
+    ports:
+      - "9000:80"
+    environment:
+      - NGINX_PORT=80
+    depends_on:
+      - server

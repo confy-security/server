@@ -1,0 +1,15 @@
+.github/
+.venv/
+tests/
+.gitignore
+app.log
+CITATION.cff
+CODE_OF_CONDUCT.md
+CONTRIBUTING.md
+docker-compose.yml
+LICENSE
+poetry.lock
+pyproject.toml
+README.md
+SECURITY.md
+nginx.conf
