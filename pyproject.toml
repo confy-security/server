@@ -8,7 +8,7 @@ authors = [
 readme = "README.md"
 requires-python = ">=3.13,<4.0"
 dependencies = [
-    "fastapi (>=0.115.14,<0.116.0)",
+    "fastapi[standard] (>=0.116.1,<0.117.0)",
     "websockets (>=15.0.1,<16.0.0)",
     "uvicorn (>=0.34.3,<0.35.0)",
 ]
@@ -16,6 +16,10 @@ dependencies = [
 [tool.poetry.group.dev.dependencies]
 ruff = "^0.11.13"
 taskipy = "^1.14.1"
+radon = "^6.0.1"
+bandit = "^1.8.6"
+pytest = "^8.4.1"
+pytest-cov = "^6.2.1"
 
 [build-system]
 requires = ["poetry-core>=2.0.0,<3.0.0"]
@@ -36,9 +40,20 @@ quote-style = 'single'
 [tool.ruff.lint.per-file-ignores]
 "main.py" = ['PLR0912']
 "__init__.py" = ['D104']
+"tests/*.py" = ['D103', 'D100']
+
+[tool.pytest.ini_options]
+pythonpath = "."
+addopts = '-p no:warnings'
+
+[tool.coverage.run]
+branch = true
 
 [tool.taskipy.tasks]
 run = 'uvicorn --reload --host 127.0.0.1 server.main:app'
 lint = 'ruff check .; ruff check . --diff'
 format = 'ruff format .; ruff check . --fix'
+radon = 'radon cc ./server -a -na'
+bandit = 'bandit -r ./server'
 export = './scripts/rm-requirements.sh && poetry export -f requirements.txt --output requirements.txt --without-hashes --without dev'
+test = 'pytest -s -x --cov=server -vv; coverage html'
