@@ -2,7 +2,7 @@
 
 from fastapi import FastAPI
 
-from server.routers import ws
+from server.routers import status, ws
 
 description = """
 Este servidor realiza o encaminhamento de mensagens entre usuários conectados
@@ -22,3 +22,4 @@ app = FastAPI(
 )
 
 app.include_router(ws.router)
+app.include_router(status.router)

@@ -3,8 +3,7 @@ from fastapi.testclient import TestClient
 from server.main import app
 
 
-def test_connection_on_server():
-    client = TestClient(app)
+def test_connection_on_server(client):
     with client.websocket_connect('/ws/pedro@maria') as websocket:
         data = websocket.receive_text()
         assert data == (
@@ -31,8 +30,7 @@ def test_notification_when_recipient_connects():
             )
 
 
-def test_notification_that_recipient_is_still_offline_if_sender_sends_something():
-    client = TestClient(app)
+def test_notification_that_recipient_is_still_offline_if_sender_sends_something(client):
     with client.websocket_connect('/ws/pedro@maria') as websocket:
         data = websocket.receive_text()
         assert data == (
