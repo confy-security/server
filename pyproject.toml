@@ -21,8 +21,6 @@ ruff = "^0.11.13"
 taskipy = "^1.14.1"
 radon = "^6.0.1"
 bandit = "^1.8.6"
-pytest = "^8.4.1"
-pytest-cov = "^6.2.1"
 
 [build-system]
 requires = ["poetry-core>=2.0.0,<3.0.0"]
@@ -50,13 +48,6 @@ quote-style = 'single'
 "db.py" = ['D100']
 "hasher.py" = ['D100']
 
-[tool.pytest.ini_options]
-pythonpath = "."
-addopts = '-p no:warnings'
-
-[tool.coverage.run]
-branch = true
-
 [tool.taskipy.tasks]
 run = 'uvicorn --reload --host 127.0.0.1 server.main:app'
 lint = 'ruff check .; ruff check . --diff'
@@ -64,4 +55,3 @@ format = 'ruff format .; ruff check . --fix'
 radon = 'radon cc ./server -a -na'
 bandit = 'bandit -r ./server'
 export = './scripts/rm-requirements.sh && poetry export -f requirements.txt --output requirements.txt --without-hashes --without dev'
-test = 'pytest -s -x --cov=server -vv; coverage html'

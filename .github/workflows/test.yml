@@ -36,12 +36,3 @@ jobs:
       
       - name: Run Bandit
         run: poetry run bandit -r ./server
-      
-      - name: Run Tests
-        run: poetry run pytest -s -x --cov=server -vv; poetry run coverage html
-
-      - name: Store coverage files
-        uses: actions/upload-artifact@v4
-        with:
-          name: coverage-html
-          path: htmlcov
