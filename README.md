@@ -30,48 +30,22 @@ Mesmo que alguma comunicação seja interceptada na rede, ela é ilegível.
 
 ## Executando o servidor
 
-### Via Docker (recomendado)
+A maneira mais rápida e fácil de executar o servidor é via docker compose.
 
-A maneira mais rápida e fácil de executar o servidor é com um container [Docker](https://www.docker.com/).
-
-```shell
-docker run -d --restart=always -p 8000:8000 --name confy-server henriquesebastiao/confy-server:latest
-```
-
-O servidor Confy agora está rodando em [http://0.0.0.0:8000](http://0.0.0.0:8000).
-
-### Localmente
-
-Caso queira executar o servidor sem Docker para fins de debug ou desenvolvimento siga as etapas abaixo.
-
-1. Tenha instalado as seguintes dependências:
-
-    - [Git](https://git-scm.com/downloads)
-    - [Poetry](https://python-poetry.org/docs/#installation)
-    - [Python 3.13 ou superior](https://www.python.org/downloads/)
-
-2. Clone este repositório e entre na pasta.
+1. Clone este repositório e entre na pasta do projeto.
 
     ```shell
     git clone https://github.com/confy-security/server.git && cd server
     ```
 
-3. Instale as dependência do servidor com Poetry.
+2. Execute o docker compose.
 
     ```shell
-    poetry install
+    docker compose up -d
     ```
 
-4. Ative o ambiente virtual.
+O servidor Confy agora está rodando em [http://0.0.0.0:9000](http://0.0.0.0:9000).
 
-5. Execute o servidor.
-
-    ```shell
-    task run
-    ```
-
-Pronto, agora o servidor Confy agora está rodando em [http://0.0.0.0:8000](http://0.0.0.0:8000).
-
-## License
+## Licença
 
 Este projeto está licenciado sob os termos da licença GNU GPL-3.0.
