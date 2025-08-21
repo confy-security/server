@@ -6,6 +6,11 @@ services:
     build: .
     volumes:
       - .:/code
+    depends_on:
+      - redis
+    environment:
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
   web:
     container_name: web-confy-server
     image: nginx:stable-alpine
@@ -18,3 +23,13 @@ services:
       - NGINX_PORT=80
     depends_on:
       - server
+  
+  redis:
+    image: redis:alpine
+    container_name: confy-redis
+    restart: always
+    volumes:
+      - redis_data:/data
+
+volumes:
+  redis_data:

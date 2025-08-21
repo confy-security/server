@@ -17,6 +17,8 @@ removendo conexões e notificando os destinatários conforme necessário.
 
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 
+from server.db import redis_client
+from server.hasher import hash_id
 from server.logger import logger
 
 router = APIRouter(prefix='/ws', tags=['WebSocket'])
@@ -42,11 +44,26 @@ async def websocket_endpoint(websocket: WebSocket, sender_id: str, recipient_id:
         recipient_id (str): O ID do destinatário.
 
     """
+    sender_id = hash_id(sender_id)
+    recipient_id = hash_id(recipient_id)
+
     # Aceita a conexão WebSocket do cliente
     await websocket.accept()
 
+    # Verifica no Redis se o usuário já está conectado
+    is_online = await redis_client.sismember('online_users', sender_id)
+    if is_online:
+        await websocket.send_text(
+            'system-message: Já há um usuário conectado com o ID que você solicitou.'
+        )
+        await websocket.close()
+        return  # encerra a função sem registrar o usuário novamente
+
     # Registra a conexão do remetente como ativa
     active_connections[sender_id] = websocket
+
+    # Salva no Redis que o usuário está online
+    await redis_client.sadd('online_users', sender_id)
 
     # Cria um identificador único e imutável para o túnel de comunicação
     tunnel_id = frozenset({sender_id, recipient_id})
@@ -93,6 +110,9 @@ async def websocket_endpoint(websocket: WebSocket, sender_id: str, recipient_id:
         # Remoção da conexão do remetente do dicionário de conexões ativas
         if sender_id in active_connections:
             del active_connections[sender_id]
+
+            # Remove do Redis quando desconectar
+            await redis_client.srem('online_users', sender_id)
 
         # Se o destinatário ainda estiver conectado, avisa e encerra a conexão dele também
         if recipient_id in active_connections:
