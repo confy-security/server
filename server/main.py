@@ -5,7 +5,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 
 from server.db import redis_client
-from server.routers import status, ws
+from server.routers import online_users, status, ws
 
 description = """
 Este servidor realiza o encaminhamento de mensagens entre usuários conectados
@@ -49,3 +49,4 @@ app = FastAPI(
 
 app.include_router(ws.router)
 app.include_router(status.router)
+app.include_router(online_users.router)
