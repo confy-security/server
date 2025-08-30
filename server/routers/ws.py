@@ -32,6 +32,78 @@ active_tunnels = set()
 # Dicionário para armazenar usuários que estão esperando pelo destinatário
 waiting_for: dict[str, list[str]] = {}
 
+# Dicionário para rastrear quais usuários fazem parte de cada túnel
+tunnel_users: dict[frozenset, set[str]] = {}
+
+
+async def cleanup_user_from_redis(user_id: str):
+    """
+    Remove um usuário do Redis e limpa suas referências.
+
+    Args:
+        user_id (str): ID do usuário para remover
+
+    """
+    await redis_client.srem('online_users', user_id)
+    logger.info(f'Usuário {user_id} removido do Redis.')
+
+
+async def handle_user_disconnect(disconnected_user: str, tunnel_id: frozenset):
+    """
+    Gerencia a desconexão de um usuário, incluindo limpeza de conexões e notificações.
+
+    Args:
+        disconnected_user (str): ID do usuário que se desconectou
+        tunnel_id (frozenset): ID do túnel que o usuário fazia parte
+
+    """
+    # Remove o usuário desconectado do dicionário de conexões ativas
+    if disconnected_user in active_connections:
+        del active_connections[disconnected_user]
+
+    # Remove o usuário do Redis
+    await cleanup_user_from_redis(disconnected_user)
+
+    # Remove o usuário da lista de usuários do túnel
+    if tunnel_id in tunnel_users:
+        tunnel_users[tunnel_id].discard(disconnected_user)
+
+        # Se ainda há usuários conectados neste túnel, notifica-os
+        remaining_users = tunnel_users[tunnel_id].copy()
+        for user_id in remaining_users:
+            if user_id in active_connections:
+                try:
+                    await active_connections[user_id].send_text(
+                        'system-message: O outro usuário se desconectou.'
+                    )
+                    await active_connections[user_id].close()
+
+                    # Remove o usuário restante das conexões ativas
+                    del active_connections[user_id]
+                    # Remove o usuário restante do Redis
+                    await cleanup_user_from_redis(user_id)
+
+                except Exception as e:
+                    logger.error(f'Erro ao notificar usuário {user_id}: {e}')
+                    # Remove mesmo se houver erro na notificação
+                    if user_id in active_connections:
+                        del active_connections[user_id]
+                    await cleanup_user_from_redis(user_id)
+
+        # Remove o túnel quando todos os usuários se desconectaram
+        del tunnel_users[tunnel_id]
+        if tunnel_id in active_tunnels:
+            active_tunnels.remove(tunnel_id)
+
+    # Limpa a lista de espera se o usuário desconectado estava sendo aguardado
+    if disconnected_user in waiting_for:
+        del waiting_for[disconnected_user]
+
+    # Remove o usuário de todas as listas de espera onde ele possa estar
+    for recipient, senders in waiting_for.items():
+        if disconnected_user in senders:
+            senders.remove(disconnected_user)
+
 
 @router.websocket('/{sender_id}@{recipient_id}')
 async def websocket_endpoint(websocket: WebSocket, sender_id: str, recipient_id: str):
@@ -70,6 +142,15 @@ async def websocket_endpoint(websocket: WebSocket, sender_id: str, recipient_id:
 
     active_tunnels.add(tunnel_id)
 
+    # Registra os usuários que fazem parte deste túnel
+    if tunnel_id not in tunnel_users:
+        tunnel_users[tunnel_id] = set()
+    tunnel_users[tunnel_id].add(sender_id)
+
+    # Se o destinatário também estiver conectado, adiciona-o ao túnel
+    if recipient_id in active_connections:
+        tunnel_users[tunnel_id].add(recipient_id)
+
     logger.info(f'Usuário {sender_id} conectado.')
 
     # Se o destinatário ainda não estiver conectado, avisa o remetente
@@ -89,6 +170,8 @@ async def websocket_endpoint(websocket: WebSocket, sender_id: str, recipient_id:
                 await active_connections[waiting_sender].send_text(
                     'system-message: O usuário destinatário agora está conectado.'
                 )
+                # Adiciona o sender que estava esperando ao túnel
+                tunnel_users[tunnel_id].add(waiting_sender)
         del waiting_for[sender_id]
 
     try:
@@ -105,24 +188,7 @@ async def websocket_endpoint(websocket: WebSocket, sender_id: str, recipient_id:
                     'system-message: O outro usuário ainda não está conectado.'
                 )
 
-    # Se o remetente desconectar, remove a conexão e notifica o destinatário
+    # Se o remetente desconectar, gerencia a limpeza adequadamente
     except WebSocketDisconnect:
-        # Remoção da conexão do remetente do dicionário de conexões ativas
-        if sender_id in active_connections:
-            del active_connections[sender_id]
-
-            # Remove do Redis quando desconectar
-            await redis_client.srem('online_users', sender_id)
-
-        # Se o destinatário ainda estiver conectado, avisa e encerra a conexão dele também
-        if recipient_id in active_connections:
-            recipient_connection = active_connections[recipient_id]
-            await recipient_connection.send_text('system-message: O outro usuário se desconectou.')
-            await recipient_connection.close()
-            del active_connections[recipient_id]
-
-        # Remove o túnel lógico entre os usuários
-        if tunnel_id in active_tunnels:
-            active_tunnels.remove(tunnel_id)
-
         logger.info(f'Usuário {sender_id} desconectado.')
+        await handle_user_disconnect(sender_id, tunnel_id)
