@@ -15,11 +15,12 @@ As mensagens são enviadas como texto simples, e o sistema lida com desconexões
 removendo conexões e notificando os destinatários conforme necessário.
 """
 
-from fastapi import APIRouter, WebSocket, WebSocketDisconnect
+from fastapi import APIRouter, HTTPException, WebSocket, WebSocketDisconnect, status
 
 from server.db import redis_client
 from server.hasher import hash_id
 from server.logger import logger
+from server.schemas.ws import RecipientAvailabilitySchema
 
 router = APIRouter(prefix='/ws', tags=['WebSocket'])
 
@@ -105,6 +106,51 @@ async def handle_user_disconnect(disconnected_user: str, tunnel_id: frozenset):
             senders.remove(disconnected_user)
 
 
+@router.get(
+    '/check-availability/{recipient_id}',
+    response_model=RecipientAvailabilitySchema,
+    summary='Retorna se destinatário já está conectado com algum usuário',
+)
+async def check_recipient_availability(recipient_id: str):
+    """
+    Verifica se o destinatário está disponível para estabelecer uma nova conexão.
+
+    Args:
+        recipient_id (str): ID do destinatário desejado
+
+    Returns:
+        JSONResponse: Status da disponibilidade do usuário
+
+    Raises:
+        HTTPException:
+            - 423 se o destinatário já estiver em uma conversa ativa
+
+    """
+    # Hash dos IDs para consistência com o WebSocket
+    hashed_recipient = hash_id(recipient_id)
+
+    # Verifica se o destinatário está online
+    recipient_online = await redis_client.sismember('online_users', hashed_recipient)
+
+    # Se o destinatário estiver online, verifica se já está em uma conversa
+    if recipient_online and hashed_recipient in active_connections:
+        # Verifica se o destinatário já faz parte de algum túnel ativo
+        for tunnel_id, users in tunnel_users.items():
+            if hashed_recipient in users and len(users) > 1:
+                # O destinatário já está em uma conversa ativa
+                raise HTTPException(
+                    status_code=status.HTTP_423_LOCKED,
+                    detail='Destinatário já está em uma conversa ativa',
+                )
+
+    data = {
+        'recipient_online': bool(recipient_online),
+        'message': 'Destinatário disponível para conexão',
+    }
+
+    return data
+
+
 @router.websocket('/{sender_id}@{recipient_id}')
 async def websocket_endpoint(websocket: WebSocket, sender_id: str, recipient_id: str):
     """
@@ -122,14 +168,30 @@ async def websocket_endpoint(websocket: WebSocket, sender_id: str, recipient_id:
     # Aceita a conexão WebSocket do cliente
     await websocket.accept()
 
+    # Verifica se o sender e recipient são o mesmo usuário
+    if sender_id == recipient_id:
+        await websocket.send_text('system-error: Você não pode se conectar com você mesmo.')
+        await websocket.close()
+        return
+
     # Verifica no Redis se o usuário já está conectado
     is_online = await redis_client.sismember('online_users', sender_id)
     if is_online:
         await websocket.send_text(
-            'system-message: Já há um usuário conectado com o ID que você solicitou.'
+            'system-error: Já há um usuário conectado com o ID que você solicitou.'
         )
         await websocket.close()
         return  # encerra a função sem registrar o usuário novamente
+
+    # Verifica se o destinatário já está em uma conversa ativa
+    if recipient_id in active_connections:
+        for tunnel_id, users in tunnel_users.items():
+            if recipient_id in users and len(users) > 1:
+                await websocket.send_text(
+                    'system-error: O destinatário já está em uma conversa ativa.'
+                )
+                await websocket.close()
+                return
 
     # Registra a conexão do remetente como ativa
     active_connections[sender_id] = websocket

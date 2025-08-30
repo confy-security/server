@@ -48,6 +48,7 @@ quote-style = 'single'
 "db.py" = ['D100']
 "hasher.py" = ['D100']
 "online_users.py" = ['D100']
+"ws.py" = ['PLR0912']
 
 [tool.taskipy.tasks]
 run = 'uvicorn --reload --host 127.0.0.1 server.main:app'
