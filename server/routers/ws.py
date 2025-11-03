@@ -41,7 +41,7 @@ router = APIRouter(prefix='/ws', tags=['WebSocket'])
 active_connections: dict[str, WebSocket] = {}
 
 # Set of active tunnels representing pairs of users who are communicating
-active_tunnels = set()
+active_tunnels: set[frozenset[str]] = set()
 
 # Dictionary to store users waiting for the recipient
 waiting_for: dict[str, list[str]] = {}
@@ -58,7 +58,7 @@ async def cleanup_user_from_redis(user_id: str):
         user_id (str): ID of the user to remove
 
     """
-    await redis_client.srem('online_users', user_id)
+    await redis_client.srem('online_users', user_id)  # type: ignore
     logger.info(f'User {user_id} removed from Redis.')
 
 
@@ -143,7 +143,7 @@ async def check_recipient_availability(recipient_id: str):
     hashed_recipient = hash_id(recipient_id)
 
     # Check if the recipient is online
-    recipient_online = await redis_client.sismember('online_users', hashed_recipient)
+    recipient_online = await redis_client.sismember('online_users', hashed_recipient)  # type: ignore
 
     # If the recipient is online, check if they are already in a conversation
     if recipient_online and hashed_recipient in active_connections:
@@ -188,7 +188,7 @@ async def websocket_endpoint(websocket: WebSocket, sender_id: str, recipient_id:
         return
 
     # Check in Redis if the user is already connected
-    is_online = await redis_client.sismember('online_users', sender_id)
+    is_online = await redis_client.sismember('online_users', sender_id)  # type: ignore
     if is_online:
         await websocket.send_text(f'{SYSTEM_ERROR_PREFIX} {THIS_ID_ALREADY_IN_USE}.')
         await websocket.close()
@@ -208,7 +208,7 @@ async def websocket_endpoint(websocket: WebSocket, sender_id: str, recipient_id:
     active_connections[sender_id] = websocket
 
     # Save to Redis that the user is online
-    await redis_client.sadd('online_users', sender_id)
+    await redis_client.sadd('online_users', sender_id)  # type: ignore
 
     # Create a unique and immutable identifier for the communication tunnel
     tunnel_id = frozenset({sender_id, recipient_id})

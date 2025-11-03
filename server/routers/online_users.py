@@ -34,7 +34,7 @@ async def check_username_availability(user_id: str):
         is available.
 
     """
-    is_online = await redis_client.sismember('online_users', hash_id(user_id))
+    is_online = await redis_client.sismember('online_users', hash_id(user_id))  # type: ignore
 
     if is_online:
         raise HTTPException(status.HTTP_409_CONFLICT, detail=DETAIL_USERNAME_NOT_AVAILABLE)

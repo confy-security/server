@@ -22,6 +22,10 @@ ruff = "^0.11.13"
 taskipy = "^1.14.1"
 radon = "^6.0.1"
 bandit = "^1.8.6"
+pytest = "^8.4.2"
+pytest-cov = "^7.0.0"
+mypy = "^1.18.2"
+pytest-asyncio = "^1.2.0"
 
 [build-system]
 requires = ["poetry-core>=2.0.0,<3.0.0"]
@@ -50,11 +54,21 @@ quote-style = 'single'
 "hasher.py" = ['D100']
 "online_users.py" = ['D100']
 "ws.py" = ['PLR0912']
+"test_main.py" = ['PLW0108']
+
+[tool.pytest.ini_options]
+pythonpath = "."
+addopts = '-p no:warnings'
+asyncio_mode = 'auto'
 
 [tool.taskipy.tasks]
-run = 'uvicorn --reload --host 127.0.0.1 server.main:app'
-lint = 'ruff check .; ruff check . --diff'
-format = 'ruff format .; ruff check . --fix'
-radon = 'radon cc ./server -a -na'
-bandit = 'bandit -r ./server'
+run = 'poetry run uvicorn --reload --host 127.0.0.1 server.main:app'
+lint = 'poetry run ruff check .; ruff check . --diff'
+format = 'poetry run ruff format .; ruff check . --fix'
+mypy = 'poetry run mypy -p server -p tests --ignore-missing-imports'
+radon = 'poetry run radon cc ./server -a -na'
+bandit = 'poetry run bandit -r ./server'
 export = './scripts/rm-requirements.sh && poetry export -f requirements.txt --output requirements.txt --without-hashes --without dev'
+pre_test = 'poetry run ruff check . -q; poetry run ruff check . --diff -q; poetry run mypy -p server -p tests --ignore-missing-imports; poetry run radon cc ./server -a -na; poetry run bandit -r ./server;'
+test = 'poetry run pytest -s -x --cov=server -vv'
+post_test = 'coverage html'
