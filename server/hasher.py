@@ -3,7 +3,7 @@ import hashlib
 
 def hash_id(user_id: str) -> str:
     """
-    Generates the hash of a given string.
+    Generate the hash of a given string.
 
     Args:
         user_id (str): Text to hash

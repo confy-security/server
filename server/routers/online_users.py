@@ -15,7 +15,7 @@ router = APIRouter(prefix='/online-users', tags=['Online Users'])
 )
 async def check_username_availability(user_id: str):
     """
-    Checks the availability of a username in the system.
+    Check the availability of a username in the system.
 
     This endpoint queries the Redis database to determine whether the specified
     user is already registered as "online". If the username is in use, the API

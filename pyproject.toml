@@ -32,7 +32,7 @@ line-length = 99
 
 [tool.ruff.lint]
 preview = true
-select = ['I', 'F', 'E', 'W', 'PL', 'PT', 'D']
+select = ['I', 'F', 'E', 'W', 'PL', 'PT', 'D', 'UP', 'PERF']
 extend-ignore = ["E501", "D203", "D212"]
 
 [tool.ruff.format]

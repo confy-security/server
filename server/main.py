@@ -16,7 +16,7 @@ using a compatible client application.
 @asynccontextmanager
 async def clean_online_users(app: FastAPI):
     """
-    Manages the FastAPI application lifecycle ensuring cleanup of online users.
+    Manage the FastAPI application lifecycle ensuring cleanup of online users.
 
     This context manager is executed when the application starts and terminates.
     Upon terminating the application lifecycle, it removes from Redis all records

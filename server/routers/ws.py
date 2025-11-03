@@ -52,7 +52,7 @@ tunnel_users: dict[frozenset, set[str]] = {}
 
 async def cleanup_user_from_redis(user_id: str):
     """
-    Removes a user from Redis and cleans up their references.
+    Remove a user from Redis and cleans up their references.
 
     Args:
         user_id (str): ID of the user to remove
@@ -64,7 +64,7 @@ async def cleanup_user_from_redis(user_id: str):
 
 async def handle_user_disconnect(disconnected_user: str, tunnel_id: frozenset):
     """
-    Manages the disconnection of a user, including cleanup of connections and notifications.
+    Manage the disconnection of a user, including cleanup of connections and notifications.
 
     Args:
         disconnected_user (str): ID of the user who disconnected
@@ -114,7 +114,7 @@ async def handle_user_disconnect(disconnected_user: str, tunnel_id: frozenset):
         del waiting_for[disconnected_user]
 
     # Remove the user from all waiting lists where they might be
-    for recipient, senders in waiting_for.items():
+    for senders in waiting_for.values():
         if disconnected_user in senders:
             senders.remove(disconnected_user)
 
@@ -126,7 +126,7 @@ async def handle_user_disconnect(disconnected_user: str, tunnel_id: frozenset):
 )
 async def check_recipient_availability(recipient_id: str):
     """
-    Checks if the recipient is available to establish a new connection.
+    Check if the recipient is available to establish a new connection.
 
     Args:
         recipient_id (str): ID of the desired recipient
@@ -148,7 +148,7 @@ async def check_recipient_availability(recipient_id: str):
     # If the recipient is online, check if they are already in a conversation
     if recipient_online and hashed_recipient in active_connections:
         # Check if the recipient is already part of any active tunnel
-        for tunnel_id, users in tunnel_users.items():
+        for users in tunnel_users.values():
             if hashed_recipient in users and len(users) > 1:
                 # The recipient is already in an active conversation
                 raise HTTPException(
@@ -167,7 +167,7 @@ async def check_recipient_availability(recipient_id: str):
 @router.websocket('/{sender_id}@{recipient_id}')
 async def websocket_endpoint(websocket: WebSocket, sender_id: str, recipient_id: str):
     """
-    Establishes a WebSocket connection between two users.
+    Establish a WebSocket connection between two users.
 
     Args:
         websocket (WebSocket): The sender's WebSocket connection.
