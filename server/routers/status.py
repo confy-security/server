@@ -8,7 +8,7 @@ router = APIRouter(prefix='/status', tags=['Status'])
 
 @router.get('', response_model=StatusSchema, summary='Retorna informações de status do sistema')
 async def get_status():
-    """Endpoint que retorna informações sobre uso de CPU e memória do sistema."""
+    """Endpoint that returns information about system CPU and memory usage."""
     number_of_cores = psutil.cpu_count()
     cpu_frequency = CpuFreq(**psutil.cpu_freq()._asdict())
     cpu_percent = psutil.cpu_percent()

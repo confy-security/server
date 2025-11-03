@@ -1,4 +1,4 @@
-"""Confy Server -  Servidor web de encaminhamento de mensagens enviadas por aplicativos clientes compatíveis."""
+"""Confy Server - Web server for forwarding messages sent by compatible client applications."""
 
 from contextlib import asynccontextmanager
 
@@ -8,26 +8,26 @@ from server.db import redis_client
 from server.routers import online_users, status, ws
 
 description = """
-Este servidor realiza o encaminhamento de mensagens entre usuários conectados
-via WebSocket utilizando algum aplicativo cliente compatível com o servidor.
+This server forwards messages between users connected via WebSocket
+using a compatible client application.
 """
 
 
 @asynccontextmanager
 async def clean_online_users(app: FastAPI):
     """
-    Gerencia o ciclo de vida da aplicação FastAPI garantindo a limpeza dos usuários online.
+    Manages the FastAPI application lifecycle ensuring cleanup of online users.
 
-    Este gerenciador de contexto é executado quando a aplicação inicia e termina.
-    Ao encerrar o ciclo de vida da aplicação, remove do Redis todos os registros
-    de usuários que estavam marcados como "online", evitando que conexões antigas
-    permaneçam ativas indevidamente após um restart do servidor.
+    This context manager is executed when the application starts and terminates.
+    Upon terminating the application lifecycle, it removes from Redis all records
+    of users marked as "online", preventing old connections from remaining active
+    unintentionally after a server restart.
 
     Args:
-        app (FastAPI): Instância da aplicação FastAPI.
+        app (FastAPI): Instance of the FastAPI application.
 
     Yields:
-        None: Permite a execução normal da aplicação durante o ciclo de vida.
+        None: Allows normal execution of the application during the lifecycle.
 
     """
     yield

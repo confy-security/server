@@ -1,7 +1,7 @@
 """
-Configuração do logger da aplicação.
+Application logger configuration.
 
-Este módulo configura o logger para a aplicação, definindo formatos, manipuladores e níveis de log.
+This module configures the logger for the application, defining formats, handlers, and log levels.
 """
 
 import logging
@@ -42,5 +42,5 @@ LOGGING_CONFIG = {
 
 dictConfig(LOGGING_CONFIG)
 
-# Criar um logger para a aplicação
+# Create a logger for the application
 logger = logging.getLogger('app')

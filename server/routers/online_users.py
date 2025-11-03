@@ -10,27 +10,27 @@ router = APIRouter(prefix='/online-users', tags=['Online Users'])
 @router.get(
     '/{user_id}',
     response_model=Message,
-    summary='Verifica se o nome de usuário solicitado está disponível.',
+    summary='Checks if the requested username is available.',
 )
 async def check_username_availability(user_id: str):
     """
-    Verifica a disponibilidade de um nome de usuário no sistema.
+    Checks the availability of a username in the system.
 
-    Este endpoint consulta o banco de dados Redis para determinar se o usuário
-    especificado já está registrado como "online". Caso o usuário esteja em uso,
-    a API retorna um erro de conflito (HTTP 409). Caso contrário, confirma que
-    o nome está disponível.
+    This endpoint queries the Redis database to determine whether the specified
+    user is already registered as "online". If the username is in use, the API
+    returns a conflict error (HTTP 409). Otherwise, it confirms that the
+    username is available.
 
     Args:
-        user_id (str): O identificador único do usuário que se deseja verificar.
+        user_id (str): The unique identifier of the user to be verified.
 
     Raises:
-        HTTPException: Retorna um erro 409 (Conflict) se o nome de usuário já
-        estiver em uso no momento.
+        HTTPException: Returns a 409 error (Conflict) if the username is
+        already in use at that moment.
 
     Returns:
-        Message: Um objeto contendo uma mensagem informando que o nome de usuário
-        está disponível.
+        Message: An object containing a message informing that the username
+        is available.
 
     """
     is_online = await redis_client.sismember('online_users', hash_id(user_id))

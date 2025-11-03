@@ -1,18 +1,18 @@
 """
-Endpoint WebSocket para comunicação em tempo real entre usuários.
+WebSocket endpoint for real-time communication between users.
 
-Este módulo define um endpoint WebSocket para uma aplicação FastAPI que permite a comunicação em tempo real entre usuários.
-Ele gerencia conexões ativas, túneis de comunicação e usuários que estão aguardando por destinatários específicos.
-As mensagens são encaminhadas entre usuários conectados, e o sistema notifica os remetentes quando
-os destinatários se conectam ou desconectam.
-O endpoint é acessível via URL no formato `/ws/{sender_id}@{recipient_id}`,
-onde `sender_id` é o ID do remetente e `recipient_id` é o ID do destinatário.
-As conexões são gerenciadas por meio de um dicionário de conexões ativas e um conjunto de túneis ativos.
-Quando um usuário se conecta, o sistema verifica se o destinatário está online.
-Se não estiver, o remetente é adicionado a uma lista de espera.
-Quando o destinatário se conecta, todos os remetentes que estavam aguardando são notificados.
-As mensagens são enviadas como texto simples, e o sistema lida com desconexões de usuários,
-removendo conexões e notificando os destinatários conforme necessário.
+This module defines a WebSocket endpoint for a FastAPI application that enables real-time
+communication between users. It manages active connections, communication tunnels, and users
+waiting for specific recipients. Messages are forwarded between connected users, and the system
+notifies senders when recipients connect or disconnect.
+The endpoint is accessible via URL in the format `/ws/{sender_id}@{recipient_id}`,
+where `sender_id` is the sender's ID and `recipient_id` is the recipient's ID.
+Connections are managed through a dictionary of active connections and a set of active tunnels.
+When a user connects, the system checks if the recipient is online.
+If not, the sender is added to a waiting list.
+When the recipient connects, all senders who were waiting are notified.
+Messages are sent as plain text, and the system handles user disconnections,
+removing connections and notifying recipients as necessary.
 """
 
 from fastapi import APIRouter, HTTPException, WebSocket, WebSocketDisconnect, status
@@ -24,52 +24,52 @@ from server.schemas.ws import RecipientAvailabilitySchema
 
 router = APIRouter(prefix='/ws', tags=['WebSocket'])
 
-# Dicionário para armazenar conexões WebSocket ativas no formato {user_id: websocket}
+# Dictionary to store active WebSocket connections in the format {user_id: websocket}
 active_connections: dict[str, WebSocket] = {}
 
-# Conjunto de túneis ativos representando pares de usuários que estão se comunicando
+# Set of active tunnels representing pairs of users who are communicating
 active_tunnels = set()
 
-# Dicionário para armazenar usuários que estão esperando pelo destinatário
+# Dictionary to store users waiting for the recipient
 waiting_for: dict[str, list[str]] = {}
 
-# Dicionário para rastrear quais usuários fazem parte de cada túnel
+# Dictionary to track which users are part of each tunnel
 tunnel_users: dict[frozenset, set[str]] = {}
 
 
 async def cleanup_user_from_redis(user_id: str):
     """
-    Remove um usuário do Redis e limpa suas referências.
+    Removes a user from Redis and cleans up their references.
 
     Args:
-        user_id (str): ID do usuário para remover
+        user_id (str): ID of the user to remove
 
     """
     await redis_client.srem('online_users', user_id)
-    logger.info(f'Usuário {user_id} removido do Redis.')
+    logger.info(f'User {user_id} removed from Redis.')
 
 
 async def handle_user_disconnect(disconnected_user: str, tunnel_id: frozenset):
     """
-    Gerencia a desconexão de um usuário, incluindo limpeza de conexões e notificações.
+    Manages the disconnection of a user, including cleanup of connections and notifications.
 
     Args:
-        disconnected_user (str): ID do usuário que se desconectou
-        tunnel_id (frozenset): ID do túnel que o usuário fazia parte
+        disconnected_user (str): ID of the user who disconnected
+        tunnel_id (frozenset): ID of the tunnel the user was part of
 
     """
-    # Remove o usuário desconectado do dicionário de conexões ativas
+    # Remove the disconnected user from the active connections dictionary
     if disconnected_user in active_connections:
         del active_connections[disconnected_user]
 
-    # Remove o usuário do Redis
+    # Remove the user from Redis
     await cleanup_user_from_redis(disconnected_user)
 
-    # Remove o usuário da lista de usuários do túnel
+    # Remove the user from the tunnel's user list
     if tunnel_id in tunnel_users:
         tunnel_users[tunnel_id].discard(disconnected_user)
 
-        # Se ainda há usuários conectados neste túnel, notifica-os
+        # If there are still users connected to this tunnel, notify them
         remaining_users = tunnel_users[tunnel_id].copy()
         for user_id in remaining_users:
             if user_id in active_connections:
@@ -79,28 +79,28 @@ async def handle_user_disconnect(disconnected_user: str, tunnel_id: frozenset):
                     )
                     await active_connections[user_id].close()
 
-                    # Remove o usuário restante das conexões ativas
+                    # Remove the remaining user from active connections
                     del active_connections[user_id]
-                    # Remove o usuário restante do Redis
+                    # Remove the remaining user from Redis
                     await cleanup_user_from_redis(user_id)
 
                 except Exception as e:
-                    logger.error(f'Erro ao notificar usuário {user_id}: {e}')
-                    # Remove mesmo se houver erro na notificação
+                    logger.error(f'Error notifying user {user_id}: {e}')
+                    # Remove even if there's an error in notification
                     if user_id in active_connections:
                         del active_connections[user_id]
                     await cleanup_user_from_redis(user_id)
 
-        # Remove o túnel quando todos os usuários se desconectaram
+        # Remove the tunnel when all users have disconnected
         del tunnel_users[tunnel_id]
         if tunnel_id in active_tunnels:
             active_tunnels.remove(tunnel_id)
 
-    # Limpa a lista de espera se o usuário desconectado estava sendo aguardado
+    # Clear the waiting list if the disconnected user was being awaited
     if disconnected_user in waiting_for:
         del waiting_for[disconnected_user]
 
-    # Remove o usuário de todas as listas de espera onde ele possa estar
+    # Remove the user from all waiting lists where they might be
     for recipient, senders in waiting_for.items():
         if disconnected_user in senders:
             senders.remove(disconnected_user)
@@ -109,35 +109,35 @@ async def handle_user_disconnect(disconnected_user: str, tunnel_id: frozenset):
 @router.get(
     '/check-availability/{recipient_id}',
     response_model=RecipientAvailabilitySchema,
-    summary='Retorna se destinatário já está conectado com algum usuário',
+    summary='Returns if recipient is already connected with a user',
 )
 async def check_recipient_availability(recipient_id: str):
     """
-    Verifica se o destinatário está disponível para estabelecer uma nova conexão.
+    Checks if the recipient is available to establish a new connection.
 
     Args:
-        recipient_id (str): ID do destinatário desejado
+        recipient_id (str): ID of the desired recipient
 
     Returns:
-        JSONResponse: Status da disponibilidade do usuário
+        JSONResponse: Status of the user's availability
 
     Raises:
         HTTPException:
-            - 423 se o destinatário já estiver em uma conversa ativa
+            - 423 if the recipient is already in an active conversation
 
     """
-    # Hash dos IDs para consistência com o WebSocket
+    # Hash the IDs for consistency with WebSocket
     hashed_recipient = hash_id(recipient_id)
 
-    # Verifica se o destinatário está online
+    # Check if the recipient is online
     recipient_online = await redis_client.sismember('online_users', hashed_recipient)
 
-    # Se o destinatário estiver online, verifica se já está em uma conversa
+    # If the recipient is online, check if they are already in a conversation
     if recipient_online and hashed_recipient in active_connections:
-        # Verifica se o destinatário já faz parte de algum túnel ativo
+        # Check if the recipient is already part of any active tunnel
         for tunnel_id, users in tunnel_users.items():
             if hashed_recipient in users and len(users) > 1:
-                # O destinatário já está em uma conversa ativa
+                # The recipient is already in an active conversation
                 raise HTTPException(
                     status_code=status.HTTP_423_LOCKED,
                     detail='Destinatário já está em uma conversa ativa',
@@ -154,36 +154,36 @@ async def check_recipient_availability(recipient_id: str):
 @router.websocket('/{sender_id}@{recipient_id}')
 async def websocket_endpoint(websocket: WebSocket, sender_id: str, recipient_id: str):
     """
-    Estabelece uma conexão WebSocket entre dois usuários.
+    Establishes a WebSocket connection between two users.
 
     Args:
-        websocket (WebSocket): A conexão WebSocket do remetente.
-        sender_id (str): O ID do remetente.
-        recipient_id (str): O ID do destinatário.
+        websocket (WebSocket): The sender's WebSocket connection.
+        sender_id (str): The sender's ID.
+        recipient_id (str): The recipient's ID.
 
     """
     sender_id = hash_id(sender_id)
     recipient_id = hash_id(recipient_id)
 
-    # Aceita a conexão WebSocket do cliente
+    # Accept the WebSocket connection from the client
     await websocket.accept()
 
-    # Verifica se o sender e recipient são o mesmo usuário
+    # Check if sender and recipient are the same user
     if sender_id == recipient_id:
         await websocket.send_text('system-error: Você não pode se conectar com você mesmo.')
         await websocket.close()
         return
 
-    # Verifica no Redis se o usuário já está conectado
+    # Check in Redis if the user is already connected
     is_online = await redis_client.sismember('online_users', sender_id)
     if is_online:
         await websocket.send_text(
             'system-error: Já há um usuário conectado com o ID que você solicitou.'
         )
         await websocket.close()
-        return  # encerra a função sem registrar o usuário novamente
+        return  # terminates the function without registering the user again
 
-    # Verifica se o destinatário já está em uma conversa ativa
+    # Check if the recipient is already in an active conversation
     if recipient_id in active_connections:
         for tunnel_id, users in tunnel_users.items():
             if recipient_id in users and len(users) > 1:
@@ -193,31 +193,31 @@ async def websocket_endpoint(websocket: WebSocket, sender_id: str, recipient_id:
                 await websocket.close()
                 return
 
-    # Registra a conexão do remetente como ativa
+    # Register the sender's connection as active
     active_connections[sender_id] = websocket
 
-    # Salva no Redis que o usuário está online
+    # Save to Redis that the user is online
     await redis_client.sadd('online_users', sender_id)
 
-    # Cria um identificador único e imutável para o túnel de comunicação
+    # Create a unique and immutable identifier for the communication tunnel
     tunnel_id = frozenset({sender_id, recipient_id})
 
     active_tunnels.add(tunnel_id)
 
-    # Registra os usuários que fazem parte deste túnel
+    # Register the users who are part of this tunnel
     if tunnel_id not in tunnel_users:
         tunnel_users[tunnel_id] = set()
     tunnel_users[tunnel_id].add(sender_id)
 
-    # Se o destinatário também estiver conectado, adiciona-o ao túnel
+    # If the recipient is also connected, add them to the tunnel
     if recipient_id in active_connections:
         tunnel_users[tunnel_id].add(recipient_id)
 
-    logger.info(f'Usuário {sender_id} conectado.')
+    logger.info(f'User {sender_id} connected.')
 
-    # Se o destinatário ainda não estiver conectado, avisa o remetente
+    # If the recipient is not yet connected, notify the sender
     if recipient_id not in active_connections:
-        # Adiciona o remetente à lista de espera pelo destinatário
+        # Add the sender to the waiting list for the recipient
         waiting_for.setdefault(recipient_id, []).append(sender_id)
 
         await websocket.send_text(
@@ -225,32 +225,32 @@ async def websocket_endpoint(websocket: WebSocket, sender_id: str, recipient_id:
             'Você será notificado quando ele estiver online.'
         )
 
-    # Verifica se alguém estava aguardando por este usuário
+    # Check if someone was waiting for this user
     if sender_id in waiting_for:
         for waiting_sender in waiting_for[sender_id]:
             if waiting_sender in active_connections:
                 await active_connections[waiting_sender].send_text(
                     'system-message: O usuário destinatário agora está conectado.'
                 )
-                # Adiciona o sender que estava esperando ao túnel
+                # Add the sender who was waiting to the tunnel
                 tunnel_users[tunnel_id].add(waiting_sender)
         del waiting_for[sender_id]
 
     try:
         while True:
-            # Aguarda o recebimento de uma mensagem do remetente
+            # Wait to receive a message from the sender
             message = await websocket.receive_text()
 
-            # Se o destinatário estiver conectado, encaminha a mensagem
+            # If the recipient is connected, forward the message
             if recipient_id in active_connections:
                 await active_connections[recipient_id].send_text(message)
             else:
-                # Se o destinatário não estiver conectado, avisa o remetente
+                # If the recipient is not connected, notify the sender
                 await websocket.send_text(
                     'system-message: O outro usuário ainda não está conectado.'
                 )
 
-    # Se o remetente desconectar, gerencia a limpeza adequadamente
+    # If the sender disconnects, manage cleanup appropriately
     except WebSocketDisconnect:
-        logger.info(f'Usuário {sender_id} desconectado.')
+        logger.info(f'User {sender_id} disconnected.')
         await handle_user_disconnect(sender_id, tunnel_id)

@@ -3,13 +3,13 @@ import hashlib
 
 def hash_id(user_id: str) -> str:
     """
-    Gera o hash de uma determinada string.
+    Generates the hash of a given string.
 
     Args:
-        user_id (str): Texto para obter o hash
+        user_id (str): Text to hash
 
     Returns:
-        str: Hash do texto informado
+        str: Hash of the provided text
 
     """
     return hashlib.sha256(user_id.encode('utf-8')).hexdigest()
