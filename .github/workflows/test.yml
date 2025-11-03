@@ -38,11 +38,12 @@ jobs:
         run: poetry run bandit -r ./server
 
       - name: Run MyPy
-        run: poetry run mypy -p confy_addons -p tests
+        run: poetry run mypy -p server -p tests --ignore-missing-imports
 
   test:
     name: Run Tests
     runs-on: ubuntu-latest
+    needs: code-quality
     strategy:
       fail-fast: false
       matrix:
@@ -71,6 +72,7 @@ jobs:
   test-with-coverage:
     name: Run Tests on Python 3.14
     runs-on: ubuntu-latest
+    needs: test
     steps:
       - name: Copy files from repo
         uses: actions/checkout@v5
