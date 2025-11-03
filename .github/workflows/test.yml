@@ -3,8 +3,8 @@ name: Test
 on: [ push, pull_request ]
 
 jobs:
-  test:
-    name: Tests
+  code-quality:
+    name: Code Quality
     runs-on: ubuntu-latest
 
     env:
@@ -36,3 +36,64 @@ jobs:
       
       - name: Run Bandit
         run: poetry run bandit -r ./server
+
+      - name: Run MyPy
+        run: poetry run mypy -p confy_addons -p tests
+
+  test:
+    name: Run Tests
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: [ '3.9', '3.10', '3.11', '3.12', '3.13' ]
+    steps:
+      - name: Copy files from repo
+        uses: actions/checkout@v5
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install Poetry
+        run: |
+          python -m pip install --upgrade pip
+          pip install poetry
+          poetry config virtualenvs.create false
+
+      - name: Install dependencies
+        run: poetry install
+
+      - name: Run Tests
+        run: poetry run pytest -s -x --cov=server -vv
+
+  test-with-coverage:
+    name: Run Tests on Python 3.14
+    runs-on: ubuntu-latest
+    steps:
+      - name: Copy files from repo
+        uses: actions/checkout@v5
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.14'
+
+      - name: Install Poetry
+        run: |
+          python -m pip install --upgrade pip
+          pip install poetry
+          poetry config virtualenvs.create false
+
+      - name: Install dependencies
+        run: poetry install
+
+      - name: Run Tests
+        run: poetry run task test
+
+      - name: Store coverage files
+        uses: actions/upload-artifact@v5
+        with:
+          name: coverage-html
+          path: htmlcov
