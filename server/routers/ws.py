@@ -15,6 +15,19 @@ Messages are sent as plain text, and the system handles user disconnections,
 removing connections and notifying recipients as necessary.
 """
 
+from confy_addons.http_messages import (
+    DETAIL_RECIPIENT_IS_ALREADY_CHATTING,
+    MESSAGE_AVAILABLE_RECIPIENT,
+)
+from confy_addons.messages import (
+    NOT_CONNECT_YOURSELF,
+    RECIPIENT_CONNECTED,
+    RECIPIENT_NOT_CONNECTED,
+    RECIPIENT_NOT_CONNECTED_2,
+    THE_OTHER_USER_LOGGED_OUT,
+    THIS_ID_ALREADY_IN_USE,
+)
+from confy_addons.prefixes import SYSTEM_ERROR_PREFIX, SYSTEM_PREFIX
 from fastapi import APIRouter, HTTPException, WebSocket, WebSocketDisconnect, status
 
 from server.db import redis_client
@@ -75,7 +88,7 @@ async def handle_user_disconnect(disconnected_user: str, tunnel_id: frozenset):
             if user_id in active_connections:
                 try:
                     await active_connections[user_id].send_text(
-                        'system-message: O outro usuário se desconectou.'
+                        f'{SYSTEM_PREFIX} {THE_OTHER_USER_LOGGED_OUT}.'
                     )
                     await active_connections[user_id].close()
 
@@ -140,12 +153,12 @@ async def check_recipient_availability(recipient_id: str):
                 # The recipient is already in an active conversation
                 raise HTTPException(
                     status_code=status.HTTP_423_LOCKED,
-                    detail='Destinatário já está em uma conversa ativa',
+                    detail=DETAIL_RECIPIENT_IS_ALREADY_CHATTING,
                 )
 
     data = {
         'recipient_online': bool(recipient_online),
-        'message': 'Destinatário disponível para conexão',
+        'message': MESSAGE_AVAILABLE_RECIPIENT,
     }
 
     return data
@@ -170,16 +183,14 @@ async def websocket_endpoint(websocket: WebSocket, sender_id: str, recipient_id:
 
     # Check if sender and recipient are the same user
     if sender_id == recipient_id:
-        await websocket.send_text('system-error: Você não pode se conectar com você mesmo.')
+        await websocket.send_text(f'{SYSTEM_ERROR_PREFIX} {NOT_CONNECT_YOURSELF}.')
         await websocket.close()
         return
 
     # Check in Redis if the user is already connected
     is_online = await redis_client.sismember('online_users', sender_id)
     if is_online:
-        await websocket.send_text(
-            'system-error: Já há um usuário conectado com o ID que você solicitou.'
-        )
+        await websocket.send_text(f'{SYSTEM_ERROR_PREFIX} {THIS_ID_ALREADY_IN_USE}.')
         await websocket.close()
         return  # terminates the function without registering the user again
 
@@ -188,7 +199,7 @@ async def websocket_endpoint(websocket: WebSocket, sender_id: str, recipient_id:
         for tunnel_id, users in tunnel_users.items():
             if recipient_id in users and len(users) > 1:
                 await websocket.send_text(
-                    'system-error: O destinatário já está em uma conversa ativa.'
+                    f'{SYSTEM_ERROR_PREFIX} O destinatário já está em uma conversa ativa.'
                 )
                 await websocket.close()
                 return
@@ -220,17 +231,14 @@ async def websocket_endpoint(websocket: WebSocket, sender_id: str, recipient_id:
         # Add the sender to the waiting list for the recipient
         waiting_for.setdefault(recipient_id, []).append(sender_id)
 
-        await websocket.send_text(
-            'system-message: O destinatário ainda não está conectado. '
-            'Você será notificado quando ele estiver online.'
-        )
+        await websocket.send_text(f'{SYSTEM_PREFIX} {RECIPIENT_NOT_CONNECTED}')
 
     # Check if someone was waiting for this user
     if sender_id in waiting_for:
         for waiting_sender in waiting_for[sender_id]:
             if waiting_sender in active_connections:
                 await active_connections[waiting_sender].send_text(
-                    'system-message: O usuário destinatário agora está conectado.'
+                    f'{SYSTEM_PREFIX} {RECIPIENT_CONNECTED}'
                 )
                 # Add the sender who was waiting to the tunnel
                 tunnel_users[tunnel_id].add(waiting_sender)
@@ -246,9 +254,7 @@ async def websocket_endpoint(websocket: WebSocket, sender_id: str, recipient_id:
                 await active_connections[recipient_id].send_text(message)
             else:
                 # If the recipient is not connected, notify the sender
-                await websocket.send_text(
-                    'system-message: O outro usuário ainda não está conectado.'
-                )
+                await websocket.send_text(f'{SYSTEM_PREFIX} {RECIPIENT_NOT_CONNECTED_2}')
 
     # If the sender disconnects, manage cleanup appropriately
     except WebSocketDisconnect:

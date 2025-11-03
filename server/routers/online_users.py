@@ -1,3 +1,4 @@
+from confy_addons.http_messages import DETAIL_USERNAME_NOT_AVAILABLE, MESSAGE_USERNAME_AVAILABLE
 from fastapi import APIRouter, HTTPException, status
 
 from server.db import redis_client
@@ -36,8 +37,6 @@ async def check_username_availability(user_id: str):
     is_online = await redis_client.sismember('online_users', hash_id(user_id))
 
     if is_online:
-        raise HTTPException(
-            status.HTTP_409_CONFLICT, detail='Este nome de usuário não está disponível'
-        )
+        raise HTTPException(status.HTTP_409_CONFLICT, detail=DETAIL_USERNAME_NOT_AVAILABLE)
 
-    return {'message': 'O nome de usuário está disponível'}
+    return {'message': MESSAGE_USERNAME_AVAILABLE}
