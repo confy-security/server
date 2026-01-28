@@ -1,0 +1,32 @@
+version: 2
+updates:
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "daily"
+    assignees:
+      - "henriquesebastiao"
+
+  - package-ecosystem: "docker-compose"
+    directory: "/"
+    schedule:
+      interval: "daily"
+    assignees:
+      - "henriquesebastiao"
+
+  - package-ecosystem: "docker"
+    directory: "/"
+    schedule:
+      interval: "daily"
+    assignees:
+      - "henriquesebastiao"
+
+  - package-ecosystem: "pip"
+    directory: "/"
+    schedule:
+      interval: "daily"
+    assignees:
+      - "henriquesebastiao"
+    target-branch: "dev"
+    exclude-paths:
+       - "requirements.txt"
