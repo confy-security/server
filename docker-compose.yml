@@ -10,7 +10,7 @@ services:
       - redis
     environment:
       - REDIS_HOST=redis
-      - REDIS_PORT=6379
+      - REDIS_PORT=9067
   web:
     container_name: web-confy-server
     image: nginx:stable-alpine
@@ -31,7 +31,7 @@ services:
     volumes:
       - redis_data:/data
     ports:
-      - "6379:6379"
+      - "9067:6379"
 
 volumes:
   redis_data:
