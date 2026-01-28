@@ -8,6 +8,7 @@ class Settings(BaseSettings):
 
     REDIS_HOST: str = 'localhost'
     REDIS_PORT: int = 6379
+    SERVER_VERSION: str = '0.0.1.dev1'
 
 
 @lru_cache

@@ -2,6 +2,7 @@ import psutil
 from fastapi import APIRouter
 
 from server.schemas.status import CpuFreq, Memory, StatusSchema
+from server.settings import get_settings
 
 router = APIRouter(prefix='/status', tags=['Status'])
 
@@ -16,6 +17,7 @@ async def get_status():
 
     cpu_frequency_percpu = psutil.cpu_freq(percpu=True)
     cpu_percent_percpu = psutil.cpu_percent(percpu=True)
+    server_version = get_settings().SERVER_VERSION
 
     status_per_core = []
 
@@ -31,6 +33,7 @@ async def get_status():
         'cpu_percent': cpu_percent,
         'status_per_core': status_per_core,
         'memory': memory,
+        'server_version': server_version,
     }
 
     return data

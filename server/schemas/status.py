@@ -32,3 +32,4 @@ class StatusSchema(BaseModel):
     cpu_percent: float
     status_per_core: list[StatusPerCore]
     memory: Memory
+    server_version: str

@@ -6,6 +6,7 @@ from fastapi import FastAPI
 
 from server.db import redis_client
 from server.routers import online_users, status, ws
+from server.settings import get_settings
 
 description = """
 This server forwards messages between users connected via WebSocket
@@ -37,7 +38,7 @@ async def clean_online_users(app: FastAPI):
 app = FastAPI(
     title='Confy Server',
     description=description,
-    version='0.0.1.dev1',
+    version=get_settings().SERVER_VERSION,
     terms_of_service='https://github.com/confy-security/server/blob/main/LICENSE',
     contact={
         'name': 'Confy Security Team',
